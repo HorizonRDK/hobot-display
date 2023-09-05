@@ -41,14 +41,14 @@ fi
 rhdmi=$(echo $f | grep "${x3sdb_hdmi1080p}")
 if [[ "$rhdmi" != "" ]]
 then
-  echo "display panel is HDMI-1080P"
+  echo "Display panel is HDMI-1080P"
   if [ -f "/etc/iar/iar_x3sdb_hdmi_1080p.json" ]
   then
     /usr/bin/x3dispinit "/etc/iar/iar_x3sdb_hdmi_${res}p.json" &
     echo start > /sys/devices/virtual/graphics/iar_cdev/iar_test_attr
     echo disable0 > /sys/devices/virtual/graphics/iar_cdev/iar_test_attr
   else
-    echo "no hdmi 1080p configuration file, use default config"
+    echo "Hdmi 1080p configuration file not found, use default config"
   fi
 fi
 
