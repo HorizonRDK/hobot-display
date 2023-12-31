@@ -212,7 +212,7 @@ function cfg_update {
 
 function auto_edid() {
    modes=$(get_edid_raw_data | edid-decode-linux-tv -X | grep "Modeline" | sed 's/^[ \t]*//g' | sed 's/.*/"&"/')
-   if [ -z "$modes" ];then
+   if [ -z "$modes" ]; then
       #default timing genrate using https://tomverbeure.github.io/video_timings_calculator
       modes=("	Modeline \"1920x1080_30\" 74.25 1920 2008 2052 2200 1080 1084 1089 1125 +HSync +VSync
       Modeline \"1920x1080_60\" 148.5 1920 2008 2052 2200 1080 1084 1089 1125 +HSync +VSync
@@ -221,7 +221,7 @@ function auto_edid() {
       Modeline \"1024x768_60\" 65 1024 1048 1184 1344 768 771 777 806 -HSync -VSync
       Modeline \"1024x768_30\" 25.932 1024 1032 1064 1104 768 769 777 783 +HSync -VSync
       Modeline \"800x600_60.32\" 40 800 840 968 1056 600 601 605 628 +HSync +VSync
-      Modeline \"640x480_75\" 31.5 640 656 720 840 480 481 484 500 -HSync -VSync" 
+      Modeline \"640x480_75\" 31.5 640 656 720 840 480 481 484 500 -HSync -VSync"
 
       )
    fi
@@ -238,6 +238,10 @@ EndSection
    while IFS= read -r line; do
       modes_array+=("$line")
    done <<<"$modes"
+
+   while IFS= read -r line; do
+      modes_array+=("$line")
+   done < <(hobot_parse_std_timing)
 
    for item in "${modes_array[@]}"; do
       if [[ ! "$item" =~ "Interlace" ]]; then
@@ -269,13 +273,29 @@ EndSection'
    second_elements=()
 
    for sentence in "${filtered_output[@]}"; do
+      if [[ "$sentence" != "#"* ]]; then
+         second_element=$(echo "$sentence" | awk '{print $2}' | tr -d '"') 
 
-      second_element=$(echo "$sentence" | awk '{print $2}')
+         # 解析宽、高、刷新率
+         width=$(echo "$second_element" | cut -d'x' -f1)
+         height_refresh_rate=$(echo "$second_element" | cut -d'x' -f2)
 
-      second_elements+=("$second_element")
+         height=$(echo "$height_refresh_rate" | awk -F'_' '{print $1}')       
+         refresh_rate=$(echo "$height_refresh_rate" | awk -F'_' '{print $2}')
+
+         # 过滤条件
+         if ((height <= 1080 && width <= 1920 )); then
+            if [ -n "$second_element" ]; then
+               second_elements+=("\"$second_element\"")
+            fi
+         fi
+      fi
    done
 
-   modes_string="$(printf ' %s' "${second_elements[@]}")"
+   IFS=$'\n' sorted_second_elements=($(sort -t'x' -k1,1nr -k2,2nr <<<"${second_elements[*]}"))
+   unset IFS
+
+   modes_string="$(printf ' %s' "${sorted_second_elements[@]}")"
 
    result="${template_screen//#replace_2/$modes_string}"
 
@@ -302,27 +322,23 @@ function config_parse() {
    timing_params="-h $hact -v $vact --hfp $hfp --hs $hs --hbp $hbp --vfp $vfp --vs $vs --vpb $vbp --clk $clk"
 }
 get_value_by_key() {
-  file="$1"
-  key="$2"
+   file="$1"
+   key="$2"
 
+   if [ ! -f "$file" ]; then
+      echo ""
+      return 1
+   fi
 
-  if [ ! -f "$file" ]; then
-    echo ""
-    return 1
-  fi
+   value=$(grep "^$key=" "$file" | awk -F '=' '{print $2}')
 
-
-  value=$(grep "^$key=" "$file" | awk -F '=' '{print $2}')
-
-
-  if [ -n "$value" ]; then
-    echo "$value"
-  else
-    echo ""
-    return 1
-  fi
+   if [ -n "$value" ]; then
+      echo "$value"
+   else
+      echo ""
+      return 1
+   fi
 }
-
 
 params="hobot_display_service"
 server_mode=1
@@ -354,27 +370,32 @@ function cmd_line_parse() {
    server_env="-s $server_mode"
    params="$params -a 1 -m $display_mode $timing_params $server_env"
 }
-display_manager=$(basename $(cat /etc/X11/default-display-manager))
+display_manager=""
+
+if [ -e "/etc/X11/default-display-manager" ]; then
+   display_manager=$(basename $(cat /etc/X11/default-display-manager))
+fi
+
 config_file="/boot/config.txt"
 
-if [ $? -eq 0 ] && [ -n "$display_manager" ]; then
+if [ $? -eq 0 ] && [ -n "$display_manager" ] && [ "$(systemctl get-default)" == "graphical.target" ]; then
    auto_edid
-   echo desktop > /sys/devices/virtual/graphics/iar_cdev/iar_test_attr
+   echo desktop >/sys/devices/virtual/graphics/iar_cdev/iar_test_attr
    server_mode=0
 else
    echo "Server mode!"
    server_mode=1
-
-
 fi
+
 cmd_line_parse
 if [ $server_mode == 1 ]; then
    fb_width=$(get_value_by_key $config_file "fb_console_width")
    fb_height=$(get_value_by_key $config_file "fb_console_height")
    fb_refresh_rate=$(get_value_by_key $config_file "fb_console_refresh_rate")
-   if [ -z "$fb_width" ] || [ -z "$fb_height" ] || [ -z "$fb_refresh_rate" ];then
+   if [ -z "$fb_width" ] || [ -z "$fb_height" ] || [ -z "$fb_refresh_rate" ]; then
       params="$params"
    else
+      echo desktop >/sys/devices/virtual/graphics/iar_cdev/iar_test_attr
       params="$params -a 1 -m $display_mode $timing_params $server_env --fb_width $fb_width --fb_height $fb_height -r $fb_refresh_rate"
    fi
 fi

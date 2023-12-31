@@ -26,14 +26,17 @@ CFLAGS = -Wall -O2
 TARGET_DISPLAY = display
 TARGET_GET_EDID_RAW = get_edid_raw_data
 TARGET_GET_HDMI_RES = get_hdmi_res
+TARGET_PARSE_STD_TIMING = hobot_parse_std_timing
 
 SRCS_DISPLAY = display.c lt8618_ioctl.c
 SRCS_GET_EDID_RAW = get_edid.c
 SRCS_GET_HDMI_RES = get_hdmi_res.c
+SRCS_PARSE_STD_TIMING = hobot_parse_std_timing.c
 
 OBJS_DISPLAY = $(SRCS_DISPLAY:.c=.o)
 OBJS_GET_EDID_RAW = $(SRCS_GET_EDID_RAW:.c=.o)
 OBJS_GET_HDMI_RES = $(SRCS_GET_HDMI_RES:.c=.o)
+OBJS_PARSE_STD_TIMING = $(SRCS_PARSE_STD_TIMING:.c=.o)
 
 # 共享库文件名
 LIBLT8618 = liblt8618.so
@@ -47,7 +50,7 @@ LIB_DIR += -L${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu --sysroot=${SYSROOT_DIR}
 LIBS = -lhbmedia -lmultimedia -lisp -lisp_algo -liar -lvio -ltinyalsa -lm -lcjson
 
 # 默认目标，编译可执行文件、共享库和 get_edid_raw_data
-all: $(TARGET_DISPLAY) $(LIBLT8618) $(TARGET_GET_EDID_RAW) $(TARGET_GET_HDMI_RES)
+all: $(TARGET_DISPLAY) $(LIBLT8618) $(TARGET_GET_EDID_RAW) $(TARGET_GET_HDMI_RES) $(TARGET_PARSE_STD_TIMING)
 
 # 编译规则
 $(TARGET_DISPLAY): $(OBJS_DISPLAY)
@@ -62,10 +65,13 @@ $(TARGET_GET_EDID_RAW): $(OBJS_GET_EDID_RAW) lt8618_ioctl.o
 $(TARGET_GET_HDMI_RES): $(OBJS_GET_HDMI_RES) lt8618_ioctl.o
 	$(CC) $(CFLAGS) -o $@ $(OBJS_GET_HDMI_RES)  $(LIB_DIR) -llt8618
 
+$(TARGET_PARSE_STD_TIMING): $(OBJS_PARSE_STD_TIMING) lt8618_ioctl.o
+	$(CC) $(CFLAGS) -o $@ $(OBJS_PARSE_STD_TIMING)  $(LIB_DIR) -llt8618
+
 # 生成目标文件
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $< $(INCLUDE_DIR)
 
 # 清理生成的文件
 clean:
-	rm -f $(OBJS_DISPLAY) $(TARGET_DISPLAY) $(LIBLT8618) $(OBJS_GET_EDID_RAW) $(TARGET_GET_EDID_RAW) $(TARGET_GET_HDMI_RES) $(OBJS_GET_HDMI_RES)
+	rm -f $(OBJS_DISPLAY) $(TARGET_DISPLAY) $(LIBLT8618) $(OBJS_GET_EDID_RAW) $(TARGET_GET_EDID_RAW) $(TARGET_GET_HDMI_RES) $(OBJS_PARSE_STD_TIMING) $(TARGET_GET_HDMI_RES) $(TARGET_PARSE_STD_TIMING)

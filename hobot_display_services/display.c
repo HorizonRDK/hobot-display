@@ -375,6 +375,10 @@ int main(int argc, char **argv)
     {
         system(modeline);
     }
+    if(args.server != 1){
+        LOG("retarting...\n");
+        system("systemctl --quiet restart lightdm.service");
+    }
     pause();
 
     return 0;
