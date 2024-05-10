@@ -44,7 +44,7 @@ LIBLT8618 = liblt8618.so
 export SYSROOT_DIR=$(realpath ../../../deploy)/rootfs
 LIB_DIR = -L../lib/ -L../lib/hbmedia -L../lib/aarch64-linux-gnu  -Wl,-rpath-link=../lib/ -L./
 INCLUDE_DIR = -I../include/iar/ -I../include/vio/
-LIB_DIR += -L${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu --sysroot=${SYSROOT_DIR}
+LIB_DIR += -L${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu -Wl,-rpath-link=${SYSROOT_DIR}/usr/lib/aarch64-linux-gnu/ --sysroot=${SYSROOT_DIR}
 
 # 第三方库文件名
 LIBS = -lhbmedia -lmultimedia -lisp -lisp_algo -liar -lvio -ltinyalsa -lm -lcjson
